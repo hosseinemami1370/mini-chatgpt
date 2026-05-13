@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MessageList } from "./message-list";
 import { ChatMessage } from "../types/message";
+import { useAutoScroll } from "../hooks/use-auto-scroll";
 
 export function ChatLayout() {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -13,10 +14,12 @@ export function ChatLayout() {
     },
   ]);
 
+  const scrollRef = useAutoScroll(messages);
+
   return (
     <div className="flex h-full flex-col">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div  ref={scrollRef} className="flex-1 overflow-y-auto p-4">
         <MessageList messages={messages} />
       </div>
 
