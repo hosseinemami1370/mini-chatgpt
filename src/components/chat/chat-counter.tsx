@@ -1,22 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import { sendMessage } from "@/app/actions/chat-actions";
 
 export function ChatCounter() {
-  const [count, setCount] = useState(0);
+  const [response, setResponse] = useState("");
+
+  async function handleClick() {
+    const res = await sendMessage("Hello from Server Action");
+    setResponse(res.reply);
+  }
 
   return (
     <div className="mt-6">
-      <p className="mb-2 text-sm text-zinc-400">
-        Client Component Counter
-      </p>
-
       <button
-        onClick={() => setCount(count + 1)}
-        className="rounded-lg bg-white px-4 py-2 text-black"
+        onClick={handleClick}
+        className="rounded bg-white px-4 py-2 text-black"
       >
-        Count: {count}
+        Call Server Action
       </button>
+
+      <p className="mt-4 text-sm text-zinc-300">
+        {response}
+      </p>
     </div>
   );
 }
