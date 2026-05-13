@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { MessageList } from "./message-list";
+import { ChatInput } from "./chat-input";
 import { ChatMessage } from "../types/message";
 import { useAutoScroll } from "../hooks/use-auto-scroll";
 
@@ -16,6 +17,16 @@ export function ChatLayout() {
 
   const scrollRef = useAutoScroll(messages);
 
+  function handleSend(message: string) {
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: message,
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+  }
+
   return (
     <div className="flex h-full flex-col">
       {/* Messages */}
@@ -25,10 +36,7 @@ export function ChatLayout() {
 
       {/* Input */}
       <div className="border-t border-zinc-800 p-4">
-        <input
-          className="w-full rounded-lg border border-zinc-700 bg-zinc-900 p-3 text-white"
-          placeholder="Type a message..."
-        />
+      <ChatInput onSend={handleSend} />
       </div>
     </div>
   );
