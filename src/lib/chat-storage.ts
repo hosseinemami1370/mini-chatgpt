@@ -1,17 +1,17 @@
-import { ChatMessage } from "@/features/chat/types/message";
+import { Conversation } from "@/features/chat/types/conversation";
 
-const STORAGE_KEY = "chat-messages";
+const STORAGE_KEY = "chat-conversations";
 
-export function saveMessages(messages: ChatMessage[]) {
+export function saveConversations(conversations: Conversation[]) {
   if (typeof window === "undefined") return;
 
   localStorage.setItem(
     STORAGE_KEY,
-    JSON.stringify(messages)
+    JSON.stringify(conversations)
   );
 }
 
-export function loadMessages(): ChatMessage[] {
+export function loadConversations(): Conversation[] {
   if (typeof window === "undefined") return [];
 
   const data = localStorage.getItem(STORAGE_KEY);
