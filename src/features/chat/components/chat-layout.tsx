@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 import { sleep } from "@/lib/sleep";
+import { loadMessages, saveMessages } from "@/lib/chat-storage";
 
 import { sendChatMessage } from "@/services/chat-service";
 
@@ -28,6 +29,18 @@ export function ChatLayout() {
 
     const scrollRef = useAutoScroll(messages);
 
+    useEffect(() => {
+        const stored = loadMessages();
+
+        if (stored.length > 0) {
+            setMessages(stored);
+        }
+    }, []);
+
+    useEffect(() => {
+        saveMessages(messages);
+    }, [messages]);
+    
     async function handleSend(message: string) {
         const userMessage: ChatMessage = {
             id: crypto.randomUUID(),
