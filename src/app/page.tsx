@@ -7,16 +7,17 @@ import { redirect } from "next/navigation";
 export default function HomePage() {
   // redirect("/chat");
   return (
-    <AppShell>
-    <div className="flex min-h-screen w-full flex-col items-center justify-center">
-      <h1 className="text-3xl font-bold">
-        Welcome to Mini ChatGPT
-      </h1>
-      <div className="flex items-center justify-center w-full">
-      <ChatLayout />
-      </div>
-      {/* <ChatCounter /> */}
-    </div>
-  </AppShell>
+    <div></div>
+  //   <AppShell>
+  //   <div className="flex min-h-screen w-full flex-col items-center justify-center">
+  //     <h1 className="text-3xl font-bold">
+  //       Welcome to Mini ChatGPT
+  //     </h1>
+  //     <div className="flex items-center justify-center w-full">
+  //     <ChatLayout />
+  //     </div>
+  //     {/* <ChatCounter /> */}
+  //   </div>
+  // </AppShell>
   );
 }

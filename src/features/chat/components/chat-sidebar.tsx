@@ -1,5 +1,4 @@
-
-import { Conversation } from "@/features/chat/types/conversation";
+import { Conversation } from "../types/conversation";
 
 type Props = {
   conversations: Conversation[];
@@ -8,7 +7,7 @@ type Props = {
   onNewChat: () => void;
 };
 
-export function AppSidebar({
+export function ChatSidebar({
   conversations,
   activeId,
   onSelect,
@@ -17,7 +16,7 @@ export function AppSidebar({
   return (
     <div className="h-full w-64 border-r border-zinc-800 bg-zinc-950 p-3 flex flex-col">
       
-      {/* New Chat */}
+      {/* New Chat Button */}
       <button
         onClick={onNewChat}
         className="mb-3 rounded-lg bg-white px-3 py-2 text-sm text-black"
@@ -25,9 +24,9 @@ export function AppSidebar({
         + New Chat
       </button>
 
-      {/* Conversations */}
+      {/* Chat List */}
       <div className="flex flex-col gap-2 overflow-y-auto">
-        {conversations?.map((chat) => {
+        {conversations.map((chat) => {
           const isActive = chat.id === activeId;
 
           return (

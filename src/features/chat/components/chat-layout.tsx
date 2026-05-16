@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { MessageList } from "./message-list";
 import { ChatInput } from "./chat-input";
@@ -10,62 +10,53 @@ import { ChatMessage } from "../types/message";
 import { Conversation } from "../types/conversation";
 
 import { useAutoScroll } from "../hooks/use-auto-scroll";
-import { loadConversations, saveConversations } from "@/lib/chat-storage";
 
-export function ChatLayout() {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+type Props = {
+  activeConversation: Conversation | null;
+  setConversations: React.Dispatch<
+    React.SetStateAction<Conversation[]>
+  >;
+};
+
+export function ChatLayout({
+  activeConversation,
+  setConversations,
+}: Props) {
   const [isTyping, setIsTyping] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
-
-  const activeConversation = conversations.find(
-    (c) => c.id === activeConversationId
-  );
 
   const messages = activeConversation?.messages || [];
 
   const scrollRef = useAutoScroll(messages);
 
-  // Load conversations on mount
-  useEffect(() => {
-    const stored = loadConversations();
-
-    if (stored.length > 0) {
-      setConversations(stored);
-      setActiveConversationId(stored[0].id);
-    } else {
-      const newChat: Conversation = {
-        id: crypto.randomUUID(),
-        title: "New Chat",
-        messages: [],
-        createdAt: Date.now(),
-      };
-
-      setConversations([newChat]);
-      setActiveConversationId(newChat.id);
-    }
-  }, []);
-
-  // Persist conversations
-  useEffect(() => {
-    saveConversations(conversations);
-  }, [conversations]);
-
-  function updateActiveConversation(
+  // -----------------------------
+  // Update helper (IMPORTANT FIX)
+  // -----------------------------
+  function updateConversation(
     updater: (conv: Conversation) => Conversation
   ) {
+    if (!activeConversation) return;
+
     setConversations((prev) =>
       prev.map((c) =>
-        c.id === activeConversationId ? updater(c) : c
+        c.id === activeConversation.id
+          ? updater(structuredClone(c))
+          : c
       )
     );
   }
 
+  // -----------------------------
+  // STOP STREAMING
+  // -----------------------------
   function handleStop() {
     abortControllerRef.current?.abort();
   }
 
+  // -----------------------------
+  // SEND MESSAGE + STREAM
+  // -----------------------------
   async function handleSend(message: string) {
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -73,7 +64,7 @@ export function ChatLayout() {
       content: message,
     };
 
-    updateActiveConversation((conv) => ({
+    updateConversation((conv) => ({
       ...conv,
       messages: [...conv.messages, userMessage],
     }));
@@ -98,7 +89,7 @@ export function ChatLayout() {
 
       const assistantMessageId = crypto.randomUUID();
 
-      updateActiveConversation((conv) => ({
+      updateConversation((conv) => ({
         ...conv,
         messages: [
           ...conv.messages,
@@ -118,7 +109,7 @@ export function ChatLayout() {
 
         streamedText += char;
 
-        updateActiveConversation((conv) => ({
+        updateConversation((conv) => ({
           ...conv,
           messages: conv.messages.map((msg) =>
             msg.id === assistantMessageId
@@ -132,7 +123,7 @@ export function ChatLayout() {
     } catch {
       setIsTyping(false);
 
-      updateActiveConversation((conv) => ({
+      updateConversation((conv) => ({
         ...conv,
         messages: [
           ...conv.messages,
@@ -147,7 +138,7 @@ export function ChatLayout() {
   }
 
   return (
-    <div className="flex  h-full w-[780px] h-full flex-col">
+    <div className="flex flex-1 flex-col">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4">
         <MessageList messages={messages} />
