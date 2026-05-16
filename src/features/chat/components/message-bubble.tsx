@@ -1,4 +1,4 @@
-import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
+import { MarkdownRenderer } from "@/components/ui/markdown/markdown-renderer";
 
 import { ChatMessage } from "../types/message";
 
