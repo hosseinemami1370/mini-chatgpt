@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { sleep } from "@/lib/sleep";
+
 import { sendChatMessage } from "@/services/chat-service";
 
 import { MessageList } from "./message-list";
@@ -30,31 +32,59 @@ export function ChatLayout() {
       role: "user",
       content: message,
     };
-
+  
     setMessages((prev) => [...prev, userMessage]);
-
+  
     try {
       setIsTyping(true);
-
+  
       const data = await sendChatMessage(message);
-
+  
+      setIsTyping(false);
+  
+      const assistantMessageId = crypto.randomUUID();
+  
       const assistantMessage: ChatMessage = {
-        id: crypto.randomUUID(),
+        id: assistantMessageId,
         role: "assistant",
-        content: data.reply,
+        content: "",
       };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+  
+      setMessages((prev) => [
+        ...prev,
+        assistantMessage,
+      ]);
+  
+      const fullText = data.reply;
+  
+      let streamedText = "";
+  
+      for (const char of fullText) {
+        streamedText += char;
+  
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: streamedText,
+                }
+              : msg
+          )
+        );
+  
+        await sleep(10);
+      }
     } catch {
+      setIsTyping(false);
+  
       const errorMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "assistant",
         content: "Something went wrong.",
       };
-
+  
       setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsTyping(false);
     }
   }
 
