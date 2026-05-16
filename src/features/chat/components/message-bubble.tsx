@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { MarkdownRenderer } from "@/components/ui/markdown/markdown-renderer";
 
 import { ChatMessage } from "../types/message";
@@ -6,7 +8,9 @@ type Props = {
   message: ChatMessage;
 };
 
-export function MessageBubble({ message }: Props) {
+function MessageBubbleComponent({
+  message,
+}: Props) {
   const isUser = message.role === "user";
 
   return (
@@ -27,3 +31,7 @@ export function MessageBubble({ message }: Props) {
     </div>
   );
 }
+
+export const MessageBubble = memo(
+  MessageBubbleComponent
+);
