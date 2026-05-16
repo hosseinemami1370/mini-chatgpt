@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 import { sleep } from "@/lib/sleep";
 
@@ -14,94 +14,106 @@ import { ChatMessage } from "../types/message";
 import { useAutoScroll } from "../hooks/use-auto-scroll";
 
 export function ChatLayout() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      content: "Hello! How can I help you?",
-    },
-  ]);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
-  const [isTyping, setIsTyping] = useState(false);
+    const [messages, setMessages] = useState<ChatMessage[]>([
+        {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: "Hello! How can I help you?",
+        },
+    ]);
 
-  const scrollRef = useAutoScroll(messages);
+    const [isTyping, setIsTyping] = useState(false);
 
-  async function handleSend(message: string) {
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: message,
-    };
-  
-    setMessages((prev) => [...prev, userMessage]);
-  
-    try {
-      setIsTyping(true);
-  
-      const data = await sendChatMessage(message);
-  
-      setIsTyping(false);
-  
-      const assistantMessageId = crypto.randomUUID();
-  
-      const assistantMessage: ChatMessage = {
-        id: assistantMessageId,
-        role: "assistant",
-        content: "",
-      };
-  
-      setMessages((prev) => [
-        ...prev,
-        assistantMessage,
-      ]);
-  
-      const fullText = data.reply;
-  
-      let streamedText = "";
-  
-      for (const char of fullText) {
-        streamedText += char;
-  
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessageId
-              ? {
-                  ...msg,
-                  content: streamedText,
+    const scrollRef = useAutoScroll(messages);
+
+    async function handleSend(message: string) {
+        const userMessage: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: "user",
+            content: message,
+        };
+
+        setMessages((prev) => [...prev, userMessage]);
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        try {
+            setIsTyping(true);
+
+            const data = await sendChatMessage(message);
+
+            setIsTyping(false);
+
+            const assistantMessageId = crypto.randomUUID();
+
+            setMessages((prev) => [
+                ...prev,
+                {
+                    id: assistantMessageId,
+                    role: "assistant",
+                    content: "",
+                },
+            ]);
+
+            const fullText = data.reply;
+            let streamedText = "";
+
+            for (const char of fullText) {
+                if (controller.signal.aborted) {
+                    break;
                 }
-              : msg
-          )
-        );
-  
-        await sleep(10);
-      }
-    } catch {
-      setIsTyping(false);
-  
-      const errorMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: "Something went wrong.",
-      };
-  
-      setMessages((prev) => [...prev, errorMessage]);
+
+                streamedText += char;
+
+                setMessages((prev) =>
+                    prev.map((msg) =>
+                        msg.id === assistantMessageId
+                            ? { ...msg, content: streamedText }
+                            : msg
+                    )
+                );
+
+                await new Promise((r) => setTimeout(r, 10));
+            }
+        } catch {
+            setIsTyping(false);
+
+            setMessages((prev) => [
+                ...prev,
+                {
+                    id: crypto.randomUUID(),
+                    role: "assistant",
+                    content: "Something went wrong.",
+                },
+            ]);
+        }
     }
-  }
 
-  return (
-    <div className="flex h-full w-[780px] flex-col">
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <MessageList messages={messages} />
+    function handleStop() {
+        abortControllerRef.current?.abort();
+    }
 
-        {isTyping && <TypingIndicator />}
-        <div ref={scrollRef} />
-      </div>
+    return (
+        <div className="flex h-full w-[780px] flex-col">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4">
+                <MessageList messages={messages} />
 
-      {/* Input */}
-      <div className="border-t border-zinc-800 p-4">
-        <ChatInput onSend={handleSend} />
-      </div>
-    </div>
-  );
+                {isTyping && <TypingIndicator />}
+                <div ref={scrollRef} />
+            </div>
+
+            {/* Input */}
+            <div className="border-t border-zinc-800 p-4">
+                <ChatInput
+                    onSend={handleSend}
+                    onStop={handleStop}
+                    isStreaming={isTyping}
+                />
+            </div>
+        </div>
+    );
 }
