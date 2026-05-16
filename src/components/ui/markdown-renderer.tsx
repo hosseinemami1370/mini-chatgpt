@@ -3,6 +3,8 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { CodeBlock } from "./code-block";
+
 type Props = {
   content: string;
 };
@@ -36,11 +38,32 @@ export function MarkdownRenderer({ content }: Props) {
           </ul>
         ),
 
-        code: ({ children }) => (
-          <code className="rounded bg-zinc-900 px-1 py-0.5 text-sm text-green-400">
-            {children}
-          </code>
-        ),
+        code(props) {
+          const { children, className } = props;
+
+          const match = /language-(\w+)/.exec(
+            className || ""
+          );
+
+          const language = match?.[1];
+
+          const value = String(children).replace(/\n$/, "");
+
+          if (language) {
+            return (
+              <CodeBlock
+                language={language}
+                value={value}
+              />
+            );
+          }
+
+          return (
+            <code className="rounded bg-zinc-900 px-1 py-0.5 text-sm text-green-400">
+              {children}
+            </code>
+          );
+        },
       }}
     >
       {content}
