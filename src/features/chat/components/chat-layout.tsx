@@ -59,12 +59,13 @@ export function ChatLayout() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full w-[780px] flex-col">
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4">
         <MessageList messages={messages} />
 
         {isTyping && <TypingIndicator />}
+        <div ref={scrollRef} />
       </div>
 
       {/* Input */}
