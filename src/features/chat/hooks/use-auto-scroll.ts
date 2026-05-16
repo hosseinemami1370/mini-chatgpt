@@ -1,14 +1,13 @@
 import { useEffect, useRef } from "react";
 
 export function useAutoScroll<T>(dependency: T) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.scrollTop =
-        containerRef.current.scrollHeight;
-    }
+    bottomRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
   }, [dependency]);
 
-  return containerRef;
+  return bottomRef;
 }
