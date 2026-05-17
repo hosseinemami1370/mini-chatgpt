@@ -1,4 +1,6 @@
-import { NextResponse } from "next/server";
+import { openai } from "@/lib/openai";
+
+export const runtime = "edge";
 
 export async function POST(req: Request) {
   try {
@@ -6,59 +8,52 @@ export async function POST(req: Request) {
 
     const message = body.message;
 
-    if (!message) {
-      return NextResponse.json(
+    const response = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+
+      stream: true,
+
+      messages: [
         {
-          error: "Message is required",
+          role: "system",
+          content:
+            "You are a helpful AI assistant.",
         },
         {
-          status: 400,
+          role: "user",
+          content: message,
+        },
+      ],
+    });
+
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        for await (const chunk of response) {
+          const content =
+            chunk.choices[0]?.delta?.content || "";
+
+          controller.enqueue(
+            encoder.encode(content)
+          );
         }
-      );
-    }
 
-    await new Promise((res) => setTimeout(res, 1000));
+        controller.close();
+      },
+    });
 
-    return NextResponse.json({
-      reply: `
-# AI Response
-
-You said:
-
-\`${message}\`
-
-## Example Code
-
-\`\`\`py
-def factorial(n):
-	if n < 0:
-		return 0
-	elif n == 0 or n == 1:
-		return 1
-	else:
-		fact = 1
-		while(n > 1):
-			fact *= n
-			n -= 1
-		return fact
-
-# Driver Code
-num = 5
-print("Factorial of",num,"is",
-factorial(num))
-}
-\`\`\`
-
-- First item
-- Second item
-      `,
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+      },
     });
   } catch (error) {
     console.error(error);
 
-    return NextResponse.json(
+    return Response.json(
       {
-        error: "Internal server error",
+        error: "Something went wrong.",
       },
       {
         status: 500,

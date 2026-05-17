@@ -74,9 +74,9 @@ export function ChatLayout({
       ...conv,
 
       title: shouldGenerateTitle
-      ? generateConversationTitle(message)
-      : conv.title,
-      
+        ? generateConversationTitle(message)
+        : conv.title,
+
       messages: [...conv.messages, userMessage],
     }));
 
@@ -86,6 +86,15 @@ export function ChatLayout({
     try {
       setIsTyping(true);
 
+      // const response = await fetch("/api/chat", {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({ message }),
+      // });
+
+      // const data = await response.json();
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -94,8 +103,13 @@ export function ChatLayout({
         body: JSON.stringify({ message }),
       });
 
-      const data = await response.json();
+      if (!response.body) {
+        throw new Error("No response body");
+      }
 
+      const reader = response.body.getReader();
+
+      const decoder = new TextDecoder();
       setIsTyping(false);
 
       const assistantMessageId = crypto.randomUUID();
@@ -112,24 +126,47 @@ export function ChatLayout({
         ],
       }));
 
-      const fullText = data.reply;
+      // const fullText = data.reply;
       let streamedText = "";
 
-      for (const char of fullText) {
-        if (controller.signal.aborted) break;
+      // for (const char of fullText) {
+      //   if (controller.signal.aborted) break;
 
-        streamedText += char;
+      //   streamedText += char;
+
+      //   updateConversation((conv) => ({
+      //     ...conv,
+      //     messages: conv.messages.map((msg) =>
+      //       msg.id === assistantMessageId
+      //         ? { ...msg, content: streamedText }
+      //         : msg
+      //     ),
+      //   }));
+
+      //   await new Promise((r) => setTimeout(r, 10));
+      // }
+
+      while (true) {
+        const { done, value } =
+          await reader.read();
+
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+
+        streamedText += chunk;
 
         updateConversation((conv) => ({
           ...conv,
           messages: conv.messages.map((msg) =>
             msg.id === assistantMessageId
-              ? { ...msg, content: streamedText }
+              ? {
+                ...msg,
+                content: streamedText,
+              }
               : msg
           ),
         }));
-
-        await new Promise((r) => setTimeout(r, 10));
       }
     } catch {
       setIsTyping(false);
