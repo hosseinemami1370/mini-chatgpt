@@ -11,6 +11,8 @@ import { Conversation } from "../types/conversation";
 
 import { useAutoScroll } from "../hooks/use-auto-scroll";
 
+import { generateConversationTitle } from "../utils/generate-title";
+
 type Props = {
   activeConversation: Conversation | null;
   setConversations: React.Dispatch<
@@ -64,8 +66,17 @@ export function ChatLayout({
       content: message,
     };
 
+    const shouldGenerateTitle =
+      activeConversation &&
+      activeConversation.messages.length === 0;
+
     updateConversation((conv) => ({
       ...conv,
+
+      title: shouldGenerateTitle
+      ? generateConversationTitle(message)
+      : conv.title,
+      
       messages: [...conv.messages, userMessage],
     }));
 

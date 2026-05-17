@@ -58,6 +58,19 @@ export default function ChatPage() {
     setConversations(updater);
   }
 
+  function renameConversation(id: string, title: string) {
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              title: title.trim() || "Untitled Chat",
+            }
+          : c
+      )
+    );
+  }
+
   const activeConversation =
     conversations.find((c) => c.id === activeId) || null;
 
@@ -67,6 +80,7 @@ export default function ChatPage() {
       activeId={activeId}
       onSelect={switchChat}
       onNewChat={createNewChat}
+      onRename={renameConversation}
     >
       <ChatLayout
         activeConversation={activeConversation}
