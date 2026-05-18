@@ -26,15 +26,14 @@ export function ChatLayout({
 }: Props) {
   const [isTyping, setIsTyping] = useState(false);
 
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const abortControllerRef =
+    useRef<AbortController | null>(null);
 
-  const messages = activeConversation?.messages || [];
+  const messages =
+    activeConversation?.messages || [];
 
   const scrollRef = useAutoScroll(messages);
 
-  // -----------------------------
-  // Update helper (IMPORTANT FIX)
-  // -----------------------------
   function updateConversation(
     updater: (conv: Conversation) => Conversation
   ) {
@@ -49,154 +48,164 @@ export function ChatLayout({
     );
   }
 
-  // -----------------------------
-  // STOP STREAMING
-  // -----------------------------
   function handleStop() {
-    abortControllerRef.current?.abort();
+    abortControllerRef.current?.abort(
+      "User stopped generation"
+    );
+
+    abortControllerRef.current = null;
+
+    setIsTyping(false);
   }
 
-  // -----------------------------
-  // SEND MESSAGE + STREAM
-  // -----------------------------
   async function handleSend(message: string) {
+    if (!activeConversation) return;
+
+    if (isTyping) return;
+
+    const trimmed = message.trim();
+    if (!trimmed) return;
+
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content: message,
+      content: trimmed,
     };
 
     const shouldGenerateTitle =
-      activeConversation &&
       activeConversation.messages.length === 0;
 
     updateConversation((conv) => ({
       ...conv,
-
       title: shouldGenerateTitle
-        ? generateConversationTitle(message)
+        ? generateConversationTitle(trimmed)
         : conv.title,
-
       messages: [...conv.messages, userMessage],
+    }));
+
+    const assistantMessageId =
+      crypto.randomUUID();
+
+    updateConversation((conv) => ({
+      ...conv,
+      messages: [
+        ...conv.messages,
+        {
+          id: assistantMessageId,
+          role: "assistant",
+          content: "",
+        },
+      ],
     }));
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    setIsTyping(true);
+
+    let reader: ReadableStreamDefaultReader<
+      Uint8Array
+    > | null = null;
+
     try {
-      setIsTyping(true);
-
-      // const response = await fetch("/api/chat", {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify({ message }),
-      // });
-
-      // const data = await response.json();
       const response = await fetch("/api/chat", {
         method: "POST",
+        signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({
+          message: trimmed,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error("Request failed");
+      }
 
       if (!response.body) {
         throw new Error("No response body");
       }
 
-      const reader = response.body.getReader();
-
+      reader = response.body.getReader();
       const decoder = new TextDecoder();
-      setIsTyping(false);
 
-      const assistantMessageId = crypto.randomUUID();
-
-      updateConversation((conv) => ({
-        ...conv,
-        messages: [
-          ...conv.messages,
-          {
-            id: assistantMessageId,
-            role: "assistant",
-            content: "",
-          },
-        ],
-      }));
-
-      // const fullText = data.reply;
       let streamedText = "";
 
-      // for (const char of fullText) {
-      //   if (controller.signal.aborted) break;
-
-      //   streamedText += char;
-
-      //   updateConversation((conv) => ({
-      //     ...conv,
-      //     messages: conv.messages.map((msg) =>
-      //       msg.id === assistantMessageId
-      //         ? { ...msg, content: streamedText }
-      //         : msg
-      //     ),
-      //   }));
-
-      //   await new Promise((r) => setTimeout(r, 10));
-      // }
-
       while (true) {
+        if (controller.signal.aborted) {
+          await reader.cancel();
+          break;
+        }
+
         const { done, value } =
           await reader.read();
 
         if (done) break;
 
-        const chunk = decoder.decode(value);
+        const chunk =
+          decoder.decode(value);
 
         streamedText += chunk;
 
         updateConversation((conv) => ({
           ...conv,
-          messages: conv.messages.map((msg) =>
-            msg.id === assistantMessageId
-              ? {
-                ...msg,
-                content: streamedText,
-              }
-              : msg
+          messages: conv.messages.map(
+            (msg) =>
+              msg.id ===
+              assistantMessageId
+                ? {
+                    ...msg,
+                    content: streamedText,
+                  }
+                : msg
           ),
         }));
       }
-    } catch {
-      setIsTyping(false);
+    } catch (error: any) {
+      if (error?.name === "AbortError") {
+        return;
+      }
+
+      console.error(error);
 
       updateConversation((conv) => ({
         ...conv,
-        messages: [
-          ...conv.messages,
-          {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: "Something went wrong.",
-          },
-        ],
+        messages: conv.messages.map(
+          (msg) =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content:
+                    "Something went wrong.",
+                }
+              : msg
+        ),
       }));
+    } finally {
+      try {
+        await reader?.cancel();
+      } catch {}
+
+      reader?.releaseLock?.();
+
+      abortControllerRef.current = null;
+      setIsTyping(false);
     }
   }
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4">
         <MessageList messages={messages} />
 
-        {isTyping && <TypingIndicator />}
+        {isTyping && (
+          <TypingIndicator />
+        )}
 
         <div ref={scrollRef} />
       </div>
 
-      {/* Input */}
       <div className="border-t border-zinc-800 p-4">
         <ChatInput
           onSend={handleSend}

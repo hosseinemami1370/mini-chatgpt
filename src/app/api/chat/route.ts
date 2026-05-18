@@ -1,23 +1,23 @@
 import { openai } from "@/lib/openai";
 
+import { SYSTEM_PROMPT } from "@/ai/prompts/system-prompt";
+import { personas } from "@/ai/prompts/personas";
+
 export const runtime = "edge";
+const persona = "engineer";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-
-    const message = body.message;
+    const { message } = await req.json();
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-
+      model: "gpt-5.4-mini",
       stream: true,
 
       messages: [
         {
           role: "system",
-          content:
-            "You are a helpful AI assistant.",
+          content: `${SYSTEM_PROMPT}\n\n${personas[persona]}`,
         },
         {
           role: "user",
@@ -31,14 +31,9 @@ export async function POST(req: Request) {
     const stream = new ReadableStream({
       async start(controller) {
         for await (const chunk of response) {
-          const content =
-            chunk.choices[0]?.delta?.content || "";
-
-          controller.enqueue(
-            encoder.encode(content)
-          );
+          const content = chunk.choices[0]?.delta?.content || "";
+          controller.enqueue(encoder.encode(content));
         }
-
         controller.close();
       },
     });
@@ -51,13 +46,9 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error(error);
 
-    return Response.json(
-      {
-        error: "Something went wrong.",
-      },
-      {
-        status: 500,
-      }
+    return new Response(
+      JSON.stringify({ error: "Something went wrong" }),
+      { status: 500 }
     );
   }
 }
