@@ -4,7 +4,6 @@ import { useRef, useState } from "react";
 
 import { MessageList } from "./message-list";
 import { ChatInput } from "./chat-input";
-import { TypingIndicator } from "./typing-indicator";
 
 import { ChatMessage } from "../types/message";
 import { Conversation } from "../types/conversation";
@@ -153,11 +152,11 @@ export function ChatLayout({
           messages: conv.messages.map(
             (msg) =>
               msg.id ===
-              assistantMessageId
+                assistantMessageId
                 ? {
-                    ...msg,
-                    content: streamedText,
-                  }
+                  ...msg,
+                  content: streamedText,
+                }
                 : msg
           ),
         }));
@@ -175,17 +174,17 @@ export function ChatLayout({
           (msg) =>
             msg.id === assistantMessageId
               ? {
-                  ...msg,
-                  content:
-                    "Something went wrong.",
-                }
+                ...msg,
+                content:
+                  "Something went wrong.",
+              }
               : msg
         ),
       }));
     } finally {
       try {
         await reader?.cancel();
-      } catch {}
+      } catch { }
 
       reader?.releaseLock?.();
 
@@ -197,11 +196,7 @@ export function ChatLayout({
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex-1 overflow-y-auto p-4">
-        <MessageList messages={messages} />
-
-        {isTyping && (
-          <TypingIndicator />
-        )}
+        <MessageList messages={messages} isStreaming={isTyping} />
 
         <div ref={scrollRef} />
       </div>
